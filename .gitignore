@@ -1,0 +1,9 @@
+# Local TypeVault data
+Credentials/
+Settings.json
+*.tmp
+*.log
+__pycache__/
+*.py[cod]
+*.zip
+*.sha256
