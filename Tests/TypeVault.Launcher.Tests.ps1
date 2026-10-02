@@ -44,7 +44,7 @@ Describe 'TypeVault Python launcher' {
     It 'includes the Windows Hello bridge helper' {
         $helperPath = Join-Path $PSScriptRoot '..' 'tools' 'WindowsHello.ps1'
         Test-Path -LiteralPath $helperPath -PathType Leaf | Should -BeTrue
-        $script:scriptText | Should -Match 'tools\WindowsHello\.ps1'
+        $script:scriptText | Should -Match 'tools\\WindowsHello\.ps1'
     }
 
 }
