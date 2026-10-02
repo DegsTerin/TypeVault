@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  powershell:
+    name: PowerShell checks
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show runtime versions
+        shell: pwsh
+        run: |
+          $PSVersionTable.PSVersion
+          python --version
+
+      - name: Install Pester and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -AllowClobber
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -AllowClobber
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $errorsFound = $false
+          Get-ChildItem -Path . -Filter '*.ps1' -File -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $errorsFound = $true
+              $errors | ForEach-Object { Write-Error "$($_.Path): $($_.Message)" }
+            }
+          }
+          if ($errorsFound) { exit 1 }
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          if ($results) {
+            $results | Format-List
+            exit 1
+          }
+
+      - name: Run Pester
+        shell: pwsh
+        run: Invoke-Pester -Path .\Tests -CI
+
+      - name: Run repository verification
+        shell: pwsh
+        run: .\tools\Invoke-Checks.ps1
+
+  python:
+    name: Python launcher checks
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Validate Python syntax
+        shell: pwsh
+        run: |
+          @'
+          import ast
+          from pathlib import Path
+          path = Path("TypeVault.py")
+          ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+          print("Python launcher syntax: PASS")
+          '@ | python -
+
+      - name: Verify launcher does not write bytecode
+        shell: pwsh
+        run: |
+          if (-not (Select-String -Path .\TypeVault.py -Pattern 'sys\.dont_write_bytecode = True' -Quiet)) {
+            exit 1
+          }
+
+  workflow-integrity:
+    name: Workflow integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify required project files
+        shell: bash
+        run: |
+          test -f TypeVault.ps1
+          test -f TypeVault.py
+          test -d Tests
+          test -d tools
+          test -f SECURITY.md
