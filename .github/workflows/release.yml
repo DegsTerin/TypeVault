@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate and publish release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install Pester and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 6.2.0 -Scope CurrentUser -Force -AllowClobber
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -AllowClobber
+
+      - name: Validate release contents
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath '.\TypeVault.ps1' -PathType Leaf)) {
+            throw 'TypeVault.ps1 is required for a valid release.'
+          }
+          Invoke-Pester -Path .\Tests -CI
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          if ($results) {
+            $results | Format-List
+            exit 1
+          }
+
+      - name: Create source package
+        shell: pwsh
+        run: |
+          $package = "TypeVault-${{ github.ref_name }}.zip"
+          Compress-Archive -Path * -DestinationPath $package -Force
+          "PACKAGE=$package" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" "${{ env.PACKAGE }}" --title "${{ github.ref_name }}" --generate-notes
