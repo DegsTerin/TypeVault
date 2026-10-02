@@ -13,7 +13,11 @@ $launcherPath = Join-Path $projectRoot 'TypeVault.py'
 Write-Host 'TypeVault verification' -ForegroundColor Cyan
 Write-Host ('=' * 62) -ForegroundColor DarkGray
 
-# PowerShell parser validation without executing the application.
+if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+    Write-Host 'Required file missing: TypeVault.ps1' -ForegroundColor Red
+    exit 1
+}
+
 $tokens = $null
 $errors = $null
 [void][System.Management.Automation.Language.Parser]::ParseFile(
@@ -32,7 +36,11 @@ if ($errors.Count -gt 0) {
 Write-Host 'PowerShell syntax: PASS' -ForegroundColor Green
 
 if (Get-Command Invoke-ScriptAnalyzer -ErrorAction SilentlyContinue) {
-    Invoke-ScriptAnalyzer -Path $scriptPath -Severity Error
+    $analysis = Invoke-ScriptAnalyzer -Path $projectRoot -Recurse -Severity Error
+    if ($analysis) {
+        $analysis | Format-List
+        exit 1
+    }
     Write-Host 'PSScriptAnalyzer errors: PASS' -ForegroundColor Green
 }
 else {
@@ -55,6 +63,7 @@ if (Get-Command python.exe -ErrorAction SilentlyContinue) {
     $pythonCheck = @'
 import ast
 from pathlib import Path
+
 path = Path(r"$launcherPath")
 ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
 print("Python launcher syntax: PASS")
