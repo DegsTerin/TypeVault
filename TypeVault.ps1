@@ -293,10 +293,16 @@ function Invoke-WindowsHelloTest {
 function Invoke-TypeVaultSelfTest {
     Assert-WindowsEnvironment
     Initialise-RuntimeStore
-    $sample=ConvertTo-SecureString 'TypeVault self-test' -AsPlainText -Force
-    $protected=ConvertFrom-SecureString $sample
-    $restored=ConvertTo-SecureString $protected
-    if((Convert-SecureStringToPlainText $restored) -cne 'TypeVault self-test'){throw 'SecureString DPAPI round-trip self-test failed.'}
+    $sample = [Security.SecureString]::new()
+    foreach ($character in 'TypeVault self-test'.ToCharArray()) {
+        $sample.AppendChar($character)
+    }
+    $sample.MakeReadOnly()
+    $protected = ConvertFrom-SecureString $sample
+    $restored = ConvertTo-SecureString $protected
+    if ((Convert-SecureStringToPlainText $restored) -cne 'TypeVault self-test') { throw 'SecureString DPAPI round-trip self-test failed.' }
+    $sample.Dispose()
+    $restored.Dispose()
     $size=[Runtime.InteropServices.Marshal]::SizeOf([TypeVault.NativeMethods+INPUT])
     if($size -ne 40){throw "Win32 INPUT structure size is $size bytes; expected 40 bytes."}
     Write-Host 'SecureString conversion: PASS'
