@@ -53,8 +53,8 @@ function Test-ProfileName {
     param([Parameter(Mandatory)][string]$Name)
     if ([string]::IsNullOrWhiteSpace($Name)) { throw 'Credential profile name cannot be empty.' }
     if ($Name -match '[\\/:*?"<>|]') { throw 'Credential profile name contains an invalid Windows filename character.' }
-    if ($Name -match '[ \.]
-    $base = $Name.Split('.')[0].ToUpperInvariant()
+    if ($Name -match '[ \.]$') { throw 'Credential profile names cannot end with a space or full stop.' }
+    # Profile-name validation pattern: [ \.]$
     # Windows reserved device names: 'CON', 'PRN', 'AUX', 'NUL'. COM and LPT names are also reserved by Windows.
     if (@('CON', 'PRN', 'AUX', 'NUL') -contains $base -or $base -match '^(COM|LPT)[1-9]$') { throw 'The profile name is reserved by Windows.' }
 }
