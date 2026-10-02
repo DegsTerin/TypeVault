@@ -112,7 +112,7 @@ Describe 'TypeVault core project' {
     It 'provides Back and Exit navigation' {
         $script:content | Should -Match '\[0\] Back'
         $script:content | Should -Match '\[0\] Exit'
-        $script:content | Should -Match "return \$null"
+        $script:content | Should -Match 'return \$null'
     }
 
     It 'provides a separate interactive Windows Hello integration test' {
