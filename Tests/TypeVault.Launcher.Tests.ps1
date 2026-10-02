@@ -39,12 +39,12 @@ Describe 'TypeVault Python launcher' {
     }
 
     It 'targets the current release' {
-        $script:scriptText | Should -Match "\$script:Version = '1.7.0'"
+        $script:scriptText | Should -Match '\$script:Version = ''1.7.0'''
     }
     It 'includes the Windows Hello bridge helper' {
         $helperPath = Join-Path $PSScriptRoot '..' 'tools' 'WindowsHello.ps1'
         Test-Path -LiteralPath $helperPath -PathType Leaf | Should -BeTrue
-        $script:scriptText | Should -Match 'tools\WindowsHello\.ps1'
+        $script:scriptText | Should -Match 'tools\\WindowsHello\.ps1'
     }
 
 }

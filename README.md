@@ -8,6 +8,8 @@
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/DegsTerin/TypeVault/actions/workflows/ci.yml/badge.svg)](https://github.com/DegsTerin/TypeVault/actions/workflows/ci.yml)
+[![Security](https://github.com/DegsTerin/TypeVault/actions/workflows/security.yml/badge.svg)](https://github.com/DegsTerin/TypeVault/actions/workflows/security.yml)
 [![Release](https://img.shields.io/badge/Release-v1.7.0-blue.svg)](CHANGELOG.md)
 
 A small, local-first utility for storing credentials with Windows DPAPI and typing them into the currently active field through Win32 `SendInput`.
@@ -208,6 +210,14 @@ TypeVault/
 ├── CHANGELOG.md
 └── LICENSE
 ```
+
+## Continuous integration and security
+
+GitHub Actions validates the repository on pushes and pull requests. The CI pipeline runs PowerShell syntax validation, PSScriptAnalyzer, Pester, repository checks and Python launcher syntax validation on Windows. Security automation also runs CodeQL for the Python and GitHub Actions portions of the repository and zizmor for GitHub Actions security analysis.
+
+Dependabot is configured to keep GitHub Actions dependencies current. Release tags matching `v*` are validated before a GitHub release package is created.
+
+All workflow action references are pinned to immutable commit SHAs and include the corresponding release version in comments.
 
 ## Testing
 

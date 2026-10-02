@@ -13,7 +13,7 @@ Describe 'TypeVault core project' {
     }
 
     It 'declares the current release version' {
-        $script:content | Should -Match "\$script:Version = '1.7.0'"
+        $script:content | Should -Match '\$script:Version = ''1.7.0'''
     }
 
     It 'targets Windows and PowerShell 7.2+' {
@@ -98,9 +98,8 @@ Describe 'TypeVault core project' {
     }
 
     It 'rejects trailing spaces and full stops in profile names' {
-        $script:content | Should -Match '\[ \.\]\$'
+        $script:content | Should -Match 'Credential profile names cannot end with a space or full stop'
     }
-
     It 'validates profile metadata before decryption' {
         $script:content | Should -Match 'Credential profile metadata does not match'
     }
@@ -112,7 +111,7 @@ Describe 'TypeVault core project' {
     It 'provides Back and Exit navigation' {
         $script:content | Should -Match '\[0\] Back'
         $script:content | Should -Match '\[0\] Exit'
-        $script:content | Should -Match "return \$null"
+        $script:content | Should -Match 'return \$null'
     }
 
     It 'provides a separate interactive Windows Hello integration test' {
@@ -258,3 +257,4 @@ Describe 'Windows Hello test path' {
         $helloTest | Should -Match 'Invoke-WindowsHelloAuthentication'
     }
 }
+
