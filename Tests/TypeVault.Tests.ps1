@@ -98,7 +98,7 @@ Describe 'TypeVault core project' {
     }
 
     It 'rejects trailing spaces and full stops in profile names' {
-        $script:content | Should -Match '\[ \.\]'
+        $script:content | Should -Match 'Credential profile names cannot end with a space or full stop'
     }
     It 'validates profile metadata before decryption' {
         $script:content | Should -Match 'Credential profile metadata does not match'
