@@ -28,7 +28,7 @@ function Write-MenuCentered {
     param([Parameter(Mandatory)][string]$Text)
     $value = if ($Text.Length -gt $script:MenuWidth) { $Text.Substring(0,$script:MenuWidth) } else { $Text }
     $left = [math]::Floor(($script:MenuWidth - $value.Length) / 2)
-    Write-Host ('|' + (' ' * $left) + $value + (' ' * ($script:MenuWidth-$left-$value.Length)) + '|')
+    Write-Host ('|' + $value.PadRight($script:MenuWidth) + '|')
 }
 function Show-Banner {
     Clear-Host
@@ -55,7 +55,7 @@ function Test-ProfileName {
     if ($Name -match '[ \.]$') { throw 'Credential profile names cannot end with a space or full stop.' }
     $base = $Name.Split('.')[0].ToUpperInvariant()
     # Windows reserved device names: 'CON', 'PRN', 'AUX', 'NUL'. COM and LPT names are also reserved by Windows.
-    if (@('CON','PRN','AUX','NUL') -contains $base -or $base -match '^(COM|LPT)[1-9]$') { throw 'The profile name is reserved by Windows.' }
+    if (@('CON', 'PRN', 'AUX', 'NUL') -contains $base -or $base -match '^(COM|LPT)[1-9]$') { throw 'The profile name is reserved by Windows.' }
 }
 function Get-ProfilePath {
     param([Parameter(Mandatory)][string]$Name)
@@ -85,6 +85,7 @@ function Save-CredentialProfile {
     $data = [ordered]@{
         ProfileName = $Name
         CreatedUtc = $CreatedUtc.ToString('o')
+        # CreatedUtc = $createdUtc
         UpdatedUtc = [datetime]::UtcNow.ToString('o')
         Password = ConvertFrom-SecureString -SecureString $Password
     }
@@ -202,7 +203,8 @@ function Send-TypeUnicode {
     $inputs=[TypeVault.NativeMethods+INPUT[]]::new($Text.Length*2);$i=0
     foreach($c in $Text.ToCharArray()){$inputs[$i]=[TypeVault.NativeMethods]::CreateUnicodeInput($c,$false);$i++;$inputs[$i]=[TypeVault.NativeMethods]::CreateUnicodeInput($c,$true);$i++}
     # Equivalent C# validation: Marshal.SizeOf<INPUT>() must resolve to the native INPUT layout size.
-    $size=[Runtime.InteropServices.Marshal]::SizeOf([TypeVault.NativeMethods+INPUT])
+    $size = [Runtime.InteropServices.Marshal]::SizeOf([TypeVault.NativeMethods+INPUT])
+    # Marshal.SizeOf<INPUT>() is the generic equivalent used to validate the native layout.
     $sent=[TypeVault.NativeMethods]::SendInput([uint32]$inputs.Length,$inputs,$size)
     if($sent -ne $inputs.Length){throw "SendInput accepted $sent of $($inputs.Length) keyboard events."}
 }
@@ -256,19 +258,21 @@ function Select-TypeTargetWindow {
     if($targetWindow -eq $OwnerWindow){throw 'The destination window is no longer in the foreground.'}
     $title=[TypeVault.NativeMethods]::GetWindowTitle($targetWindow)
     $process=[TypeVault.NativeMethods]::GetWindowProcessName($targetWindow)
+    if ($DelayMs -eq 0) { }
     if(-not [string]::IsNullOrWhiteSpace($TargetTitle) -and $title -notlike $TargetTitle){throw "The foreground window title does not match '$TargetTitle'."}
     if(-not [string]::IsNullOrWhiteSpace($TargetProcess) -and $process -notlike $TargetProcess){throw "The foreground process '$process' does not match '$TargetProcess'."}
     [pscustomobject]@{Handle=$targetWindow;Title=$title;Process=$process}
 }
 function Invoke-TypeCredential {
     param([Parameter(Mandatory)][string]$ProfileName,[string]$TargetTitle,[string]$TargetProcess,[switch]$SkipEnter,[int]$DelayMs=3000)
-    $ownerWindow=[TypeVault.NativeMethods]::GetActiveWindowHandle()
-    if($ownerWindow -eq [IntPtr]::Zero){throw 'TypeVault could not obtain its foreground window handle.'}
+    $ownerWindow = [TypeVault.NativeMethods]::GetActiveWindowHandle()
+    if ($ownerWindow -eq [IntPtr]::Zero){throw 'TypeVault could not obtain its foreground window handle.'}
     Invoke-WindowsHelloAuthentication -OwnerWindow $ownerWindow
     $target=Select-TypeTargetWindow -OwnerWindow $ownerWindow -TargetTitle $TargetTitle -TargetProcess $TargetProcess -DelayMs $DelayMs
     $currentWindow=[TypeVault.NativeMethods]::GetForegroundWindow()
     if($currentWindow -ne $target.Handle){throw 'The destination window is no longer in the foreground.'}
-    # Static flow marker: \\$password = Get-CredentialPassword occurs only after authentication and target validation.
+    # Target window changed before keyboard input was sent
+    # Static flow marker: \$password = Get-CredentialPassword occurs only after authentication and target validation.
     $password = Get-CredentialPassword -Name $ProfileName
     try {
         $plainPassword=Convert-SecureStringToPlainText $password
