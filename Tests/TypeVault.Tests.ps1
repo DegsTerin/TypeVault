@@ -13,7 +13,7 @@ Describe 'TypeVault core project' {
     }
 
     It 'declares the current release version' {
-        $script:content | Should -Match "\$script:Version = '1.7.0'"
+        $script:content | Should -Match '\$script:Version = ''1.7.0'''
     }
 
     It 'targets Windows and PowerShell 7.2+' {
